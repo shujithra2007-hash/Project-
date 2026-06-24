@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Productivity App</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --primary: #ff6b6b;
+            --primary-hover: #e05353;
+            --accent: #339af0;
+            --text: #212529;
+            --text-light: #868e96;
+            --border: #dee2e6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text);
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #495057;
+        }
+
+        /* Mobile-First Timer */
+        .timer-card {
+            text-align: center;
+            background: #fff5f5;
+            border: 1px solid #ffe3e3;
+        }
+
+        .timer-display {
+            font-size: 56px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 16px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .timer-btn {
+            width: 100%;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(255, 107, 107, 0.2);
+        }
+
+        .timer-btn:active {
+            background: var(--primary-hover);
+        }
+
+        .reset-link {
+            display: inline-block;
+            margin-top: 12px;
+            color: var(--text-light);
+            font-size: 14px;
+            text-decoration: none;
+            padding: 8px;
+        }
+
+        /* Mobile-First Tasks */
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        #task-input {
+            flex: 1;
+            padding: 14px;
+            font-size: 16px; /* Prevents iOS auto-zoom on focus */
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            outline: none;
+            background: #f1f3f5;
+        }
+
+        #task-input:focus {
+            border-color: var(--accent);
+            background: #fff;
+        }
+
+        #add-btn {
+            padding: 0 20px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            background: var(--accent);
+            color: white;
+        }
+
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        /* Bigger touch target for checkboxes */
+        input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .task-text {
+            font-size: 16px;
+            word-break: break-word;
+        }
+
+        .completed .task-text {
+            text-decoration: line-through;
+            color: var(--text-light);
+        }
+
+        /* Bigger touch target for delete button */
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #deb8b8;
+            font-size: 24px;
+            padding: 4px 12px;
+            cursor: pointer;
+        }
+        
+        .delete-btn:active {
+            color: #fa5252;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card timer-card">
+            <div class="timer-display" id="timer">25:00</div>
+            <button class="timer-btn" id="start-btn">Start Session</button>
+            <div class="reset-link" id="reset-btn">Reset Timer</div>
+        </div>
+
+        <div class="card">
+            <h2>Today's Focus</h2>
+            <div class="input-group">
+                <input type="text" id="task-input" placeholder="Add a vital task..." autocomplete="off">
+                <button id="add-btn">Add</button>
+            </div>
+            <ul class="task-list" id="task-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        // --- Timer Logic ---
+        let timeLeft = 25 * 60;
+        let timerId = null;
+        let isRunning = false;
+
+        const timerDisplay = document.getElementById('timer');
+        const startBtn = document.getElementById('start-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        function updateDisplay() {
+            const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const secs = (timeLeft % 60).toString().padStart(2, '0');
+            timerDisplay.textContent = `${mins}:${secs}`;
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerId);
+                startBtn.textContent = 'Resume Session';
+                isRunning = false;
+            } else {
+                isRunning = true;
+                startBtn.textContent = 'Pause';
+                timerId = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        updateDisplay();
+                    } else {
+                        clearInterval(timerId);
+                        alert('Focus session complete! Take a break.');
+                        resetTimer();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerId);
+            timeLeft = 25 * 60;
+            isRunning = false;
+            startBtn.textContent = 'Start Session';
+            updateDisplay();
+        }
+
+        startBtn.addEventListener('click', toggleTimer);
+        resetBtn.addEventListener('click', resetTimer);
+
+        // --- Task Logic ---
+        const taskInput = document.getElementById('task-input');
+        const addBtn = document.getElementById('add-btn');
+        const taskList = document.getElementById('task-list');
+
+        let tasks = [
+            { id: 1, text: "Tap checkbox to complete", completed: false },
+            { id: 2, text: "Swipe or press &times; to delete", completed: true }
+        ];
+
+        function renderTasks() {
+            taskList.innerHTML = '';
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                li.innerHTML = `
+                    <div class="task-left">
+                        <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
+                        <span class="task-text">${escapeHTML(task.text)}</span>
+                    </div>
+                    <button class="delete-btn" onclick="deleteTask(${task.id})">&times;</button>
+                `;
+                taskList.appendChild(li);
+            });
+        }
+
+        function addTask() {
+            const text = taskInput.value.trim();
+            if (!text) return;
+            tasks.push({ id: Date.now(), text, completed: false });
+            taskInput.value = '';
+            renderTasks();
+        }
+
+        function toggleTask(id) {
+            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+            renderTasks();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+        }
+
+        addBtn.addEventListener('click', addTask);
+        taskInput.addEventListener('keypress', e => { if(e.key === 'Enter') addTask(); });
+
+        renderTasks();
+    </script>
+</body>
+</html>
